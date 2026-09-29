@@ -1,36 +1,130 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Compass Hub
 
-## Getting Started
+Central interna de inteligência e acompanhamento da carteira de clientes da Compass Agência.
 
-First, run the development server:
+O Hub organiza contexto institucional, responsáveis, serviços, contratos, documentos, métricas, objetivos e atualizações semanais. O produto foi desenhado para que a situação de qualquer cliente possa ser entendida em menos de 60 segundos, sem substituir o ClickUp ou as plataformas de mídia.
+
+## Recursos do MVP
+
+- autenticação privada com Supabase Auth e recuperação de senha;
+- perfis de administrador e colaborador com permissões distintas;
+- cadastro, edição, arquivamento, busca e filtros de clientes;
+- catálogo de serviços e definição de escopo por cliente;
+- responsáveis principais e secundários;
+- contratos, vigência, renovação, escopo e dados financeiros protegidos;
+- documentos privados no Supabase Storage;
+- métricas personalizadas, histórico e comparação entre início e situação atual;
+- objetivos vinculados a métricas com cálculo de progresso;
+- atualizações semanais, resultados destacados e timeline;
+- dashboard executivo, feed global e alertas de pendências;
+- auditoria automática das alterações sensíveis no banco.
+
+## Stack
+
+- Next.js 16 com App Router, React 19 e TypeScript;
+- Tailwind CSS e componentes Base UI/shadcn adaptados à identidade Compass;
+- Supabase PostgreSQL, Auth e Storage;
+- Zod para validação no servidor;
+- RLS como camada obrigatória de autorização no banco.
+
+Requisito de runtime: Node.js `20.9.0` ou superior. Para produção, prefira uma versão LTS atual.
+
+## Instalação local
+
+```bash
+npm ci
+```
+
+Copie `.env.example` para `.env.local` e preencha as quatro variáveis:
+
+```env
+NEXT_PUBLIC_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
+NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
+SUPABASE_SECRET_KEY=sb_secret_...
+```
+
+`SUPABASE_SECRET_KEY` é exclusiva do servidor. Nunca use o prefixo `NEXT_PUBLIC_` nessa variável e nunca a envie ao repositório.
+
+## Supabase
+
+O passo a passo completo está em [docs/SUPABASE_SETUP.md](docs/SUPABASE_SETUP.md).
+
+Depois de autenticar e vincular a CLI ao projeto:
+
+```bash
+npx supabase db push --dry-run
+npx supabase db push
+```
+
+As migrations em `supabase/migrations` criam o schema, catálogos, funções, views, auditoria, políticas RLS e o bucket privado de documentos.
+
+No Dashboard do Supabase, mantenha o cadastro público desativado e configure a URL do ambiente em `Authentication > URL Configuration`.
+
+## Executar
+
+Desenvolvimento:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abra `http://localhost:3000`.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Produção local:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm run start
+```
 
-## Learn More
+## Verificações
 
-To learn more about Next.js, take a look at the following resources:
+Antes de publicar uma versão:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+npm run lint
+npx tsc --noEmit
+npm run test
+npm run build
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Com a aplicação executando, o endpoint `GET /api/health` responde sem autenticação e pode ser utilizado pelo monitor da VPS.
 
-## Deploy on Vercel
+## Rotas principais
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+| Rota | Finalidade |
+| --- | --- |
+| `/dashboard` | Visão executiva da carteira |
+| `/clients` | Clientes, busca e filtros |
+| `/clients/[id]/overview` | Resumo estratégico do cliente |
+| `/clients/[id]/goals` | Objetivos e progresso |
+| `/clients/[id]/metrics` | Ponto de partida e histórico |
+| `/clients/[id]/updates` | Atualizações e timeline |
+| `/clients/[id]/contract` | Contrato, financeiro e escopo |
+| `/clients/[id]/documents` | Documentos privados |
+| `/updates` | Feed global de atualizações |
+| `/pending` | Alertas operacionais |
+| `/settings/users` | Administração de acessos |
+| `/settings/services` | Catálogo de serviços |
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## Segurança
+
+- todas as rotas internas exigem sessão válida;
+- ações sensíveis verificam a permissão novamente no servidor;
+- colaboradores só alteram dados operacionais dos clientes atribuídos;
+- valores financeiros e contratos ficam restritos aos administradores;
+- arquivos permanecem em bucket privado e downloads usam URLs assinadas curtas;
+- o banco utiliza RLS mesmo quando a interface já oculta uma ação;
+- alterações sensíveis geram registros em `audit_logs`.
+
+## Deploy na VPS
+
+O guia de produção com Node.js, systemd, Nginx, HTTPS, limites de upload e procedimento de atualização está em [docs/DEPLOY_VPS.md](docs/DEPLOY_VPS.md).
+
+## Documentação técnica
+
+- [Arquitetura](docs/ARCHITECTURE.md)
+- [Modelo de dados](docs/DATABASE.md)
+- [Configuração do Supabase](docs/SUPABASE_SETUP.md)
+- [Deploy na VPS](docs/DEPLOY_VPS.md)
