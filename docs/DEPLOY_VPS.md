@@ -10,7 +10,7 @@ Este guia utiliza uma única instância Node.js atrás do Nginx. É uma configur
 - domínio apontando para o IP da VPS;
 - usuário de sistema sem privilégios de root para executar a aplicação.
 
-Não exponha a porta `3000` à internet. Deixe o Nginx receber o tráfego público e encaminhar para `127.0.0.1:3000`.
+Não exponha a porta `3030` à internet. Deixe o Nginx receber o tráfego público e encaminhar para `127.0.0.1:3030`.
 
 ## 2. Preparar a aplicação
 
@@ -60,7 +60,7 @@ Group=SEU_USUARIO
 WorkingDirectory=/var/www/compass-hub
 Environment=NODE_ENV=production
 EnvironmentFile=/var/www/compass-hub/.env.production
-ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1 --port 3000
+ExecStart=/usr/bin/npm run start -- --hostname 127.0.0.1
 Restart=on-failure
 RestartSec=5
 KillSignal=SIGTERM
@@ -83,7 +83,7 @@ sudo systemctl status compass-hub
 Teste localmente na VPS:
 
 ```bash
-curl --fail http://127.0.0.1:3000/api/health
+curl --fail http://127.0.0.1:3030/api/health
 ```
 
 ## 4. Nginx
@@ -99,7 +99,7 @@ server {
     client_max_body_size 22M;
 
     location / {
-        proxy_pass http://127.0.0.1:3000;
+        proxy_pass http://127.0.0.1:3030;
         proxy_http_version 1.1;
         proxy_set_header Host $host;
         proxy_set_header X-Real-IP $remote_addr;

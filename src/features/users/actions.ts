@@ -45,7 +45,7 @@ export async function inviteUserAction(
   try {
     const admin = createAdminClient();
     const siteUrl =
-      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000";
+      process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3030";
     const { data, error } = await admin.auth.admin.inviteUserByEmail(
       parsed.data.email,
       {

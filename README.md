@@ -39,7 +39,7 @@ Copie `.env.example` para `.env.local` e preencha as quatro variáveis:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3030
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 SUPABASE_SECRET_KEY=sb_secret_...
 ```
@@ -69,7 +69,7 @@ Desenvolvimento:
 npm run dev
 ```
 
-Abra `http://localhost:3000`.
+Abra `http://localhost:3030`.
 
 Produção local:
 

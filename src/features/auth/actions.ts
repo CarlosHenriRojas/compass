@@ -85,7 +85,7 @@ export async function requestPasswordResetAction(
   const origin =
     configuredSiteUrl ??
     requestHeaders.get("origin") ??
-    "http://localhost:3000";
+    "http://localhost:3030";
   const supabase = await createClient();
 
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data, {

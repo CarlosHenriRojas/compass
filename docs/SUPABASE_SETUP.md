@@ -8,7 +8,7 @@ Copie `.env.example` para `.env.local` e preencha:
 
 ```env
 NEXT_PUBLIC_SUPABASE_URL=https://SEU_PROJECT_REF.supabase.co
-NEXT_PUBLIC_SITE_URL=http://localhost:3000
+NEXT_PUBLIC_SITE_URL=http://localhost:3030
 NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_...
 SUPABASE_SECRET_KEY=sb_secret_...
 ```
@@ -32,10 +32,10 @@ No projeto hospedado, abra as configurações de autenticação:
 
 1. Mantenha o provedor de e-mail habilitado.
 2. Desative o cadastro público de novos usuários.
-3. Configure a Site URL como `http://localhost:3000` durante o desenvolvimento.
+3. Configure a Site URL como `http://localhost:3030` durante o desenvolvimento.
 4. Adicione as URLs de redirecionamento:
-   - `http://localhost:3000/auth/callback`
-   - `http://localhost:3000/update-password`
+   - `http://localhost:3030/auth/callback`
+   - `http://localhost:3030/update-password`
 5. Quando houver deploy, adicione as URLs equivalentes do domínio de produção.
 
 O arquivo `supabase/config.toml` já replica essas regras para o ambiente local, mas as opções do projeto hospedado precisam ser conferidas no Dashboard.
@@ -90,7 +90,7 @@ Somente depois de aplicar as migrations:
 1. Abra `Authentication > Users`.
 2. Crie o primeiro usuário da Compass com e-mail e senha.
 3. O primeiro perfil criado será promovido automaticamente a `ADMIN`.
-4. Faça login em `http://localhost:3000/login`.
+4. Faça login em `http://localhost:3030/login`.
 
 Usuários posteriores podem ser convidados por `/settings/users` dentro do Compass Hub.
 
