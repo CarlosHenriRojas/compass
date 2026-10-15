@@ -7,6 +7,7 @@ type ClientTab =
   | "goals"
   | "metrics"
   | "updates"
+  | "tasks"
   | "contract"
   | "documents";
 
@@ -19,6 +20,7 @@ const tabs: Array<{
   { key: "goals", label: "Objetivos", enabled: true },
   { key: "metrics", label: "Métricas", enabled: true },
   { key: "updates", label: "Atualizações", enabled: true },
+  { key: "tasks", label: "Tarefas", enabled: true },
   { key: "contract", label: "Contrato", enabled: true },
   { key: "documents", label: "Documentos", enabled: true },
 ];

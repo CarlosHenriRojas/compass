@@ -2,7 +2,7 @@
 
 Central interna de inteligência e acompanhamento da carteira de clientes da Compass Agência.
 
-O Hub organiza contexto institucional, responsáveis, serviços, contratos, documentos, métricas, objetivos e atualizações semanais. O produto foi desenhado para que a situação de qualquer cliente possa ser entendida em menos de 60 segundos, sem substituir o ClickUp ou as plataformas de mídia.
+O Hub organiza contexto institucional, responsáveis, serviços, contratos, documentos, métricas, objetivos, atualizações semanais e tarefas. O produto foi desenhado para que a situação de qualquer cliente possa ser entendida em menos de 60 segundos e para centralizar a execução operacional da agência.
 
 ## Recursos do MVP
 
@@ -16,6 +16,7 @@ O Hub organiza contexto institucional, responsáveis, serviços, contratos, docu
 - métricas personalizadas, histórico e comparação entre início e situação atual;
 - objetivos vinculados a métricas com cálculo de progresso;
 - atualizações semanais, resultados destacados e timeline;
+- Kanban geral e por cliente, com tarefas internas, múltiplos responsáveis, prazos, prioridades e histórico de etapas;
 - dashboard executivo, feed global e alertas de pendências;
 - auditoria automática das alterações sensíveis no banco.
 

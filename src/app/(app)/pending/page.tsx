@@ -49,7 +49,7 @@ export default async function PendingPage() {
 
   return (
     <div className="space-y-6 lg:space-y-7">
-      <PageHeader eyebrow="Atenção" title="Pendências" description="Alertas estratégicos calculados automaticamente — sem transformar o Hub em um gerenciador de tarefas." action={<Badge variant={total ? "destructive" : "outline"}>{total} alerta(s)</Badge>} />
+      <PageHeader eyebrow="Atenção" title="Pendências" description="Alertas estratégicos calculados automaticamente a partir dos dados da carteira." action={<Badge variant={total ? "destructive" : "outline"}>{total} alerta(s)</Badge>} />
 
       {total === 0 ? (
         <EmptyState icon={CheckCircle2} title="Tudo em dia" description="Não existem atualizações atrasadas, contratos próximos do vencimento, objetivos vencidos ou clientes em atenção." />
@@ -77,7 +77,7 @@ export default async function PendingPage() {
         </div>
       )}
 
-      <div className="flex items-start gap-3 rounded-xl border border-border bg-background-elevated/35 p-4 text-sm leading-6 text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0 text-compass-purple-light" aria-hidden="true" /><p>Esses alertas são derivados dos dados do cliente e não criam tarefas. A execução operacional continua sendo gerenciada no ClickUp.</p></div>
+      <div className="flex items-start gap-3 rounded-xl border border-border bg-background-elevated/35 p-4 text-sm leading-6 text-muted-foreground"><CircleAlert className="mt-0.5 size-4 shrink-0 text-compass-purple-light" aria-hidden="true" /><p>Esses alertas são derivados dos dados estratégicos. Para organizar a execução operacional, use o módulo Tarefas.</p></div>
     </div>
   );
 }

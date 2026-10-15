@@ -7,7 +7,7 @@ O Compass Hub será uma central interna de inteligência sobre a carteira de cli
 - um sócio entende a situação da carteira em menos de 60 segundos;
 - um colaborador registra a atualização semanal de um cliente em 2 a 5 minutos.
 
-O sistema não será um ERP, gerenciador de tarefas, CRM comercial ou substituto das plataformas de mídia.
+O sistema não será um ERP, CRM comercial ou substituto das plataformas de mídia. A execução operacional será centralizada em um módulo próprio de tarefas.
 
 ## 2. Decisões principais
 
@@ -156,6 +156,10 @@ Métricas registram uma linha de base e uma série histórica. Objetivos podem s
 ### Atualizações
 
 Uma atualização semanal guarda o relato, bloqueios, resultados, próximos passos e a saúde informada naquele momento. Os resultados destacados ficam em registros filhos.
+
+### Tarefas
+
+Uma única tarefa alimenta o Kanban geral e, quando vinculada, a aba do cliente. Tarefas também podem ser internas da Compass, possuir múltiplos responsáveis, prioridade, prazo, serviço e histórico de movimentação entre `TODO`, `IN_PROGRESS`, `REVIEW` e `DONE`.
 
 ### Pendências
 

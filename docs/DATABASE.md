@@ -23,6 +23,8 @@
 | `goal_status` | `NOT_STARTED`, `IN_PROGRESS`, `ACHIEVED`, `PAUSED`, `CANCELLED` |
 | `metric_direction` | `INCREASE`, `DECREASE`, `NEUTRAL` |
 | `document_category` | `CONTRACT`, `BRIEFING`, `PLANNING`, `REPORT`, `CLIENT_MATERIAL`, `OTHER` |
+| `task_status` | `TODO`, `IN_PROGRESS`, `REVIEW`, `DONE` |
+| `task_priority` | `LOW`, `MEDIUM`, `HIGH`, `URGENT` |
 
 Enums serão utilizados somente para conjuntos realmente fechados. Unidades de métricas permanecerão em uma tabela de catálogo para permitir extensões sem migration de enum.
 
