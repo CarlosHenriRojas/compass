@@ -159,7 +159,7 @@ Uma atualização semanal guarda o relato, bloqueios, resultados, próximos pass
 
 ### Tarefas
 
-Uma única tarefa alimenta o Kanban geral e, quando vinculada, a aba do cliente. Tarefas também podem ser internas da Compass, possuir múltiplos responsáveis, prioridade, prazo, serviço e histórico de movimentação entre `TODO`, `IN_PROGRESS`, `REVIEW` e `DONE`.
+Uma única tarefa alimenta o Kanban geral e, quando vinculada, a aba do cliente. Tarefas também podem ser internas da Compass, possuir múltiplos responsáveis, prioridade, prazo, serviço e histórico de movimentação entre `TODO`, `IN_PROGRESS`, `REVIEW` e `DONE`. Subtarefas reutilizam a mesma entidade por meio de `parent_task_id`, mantendo responsáveis, prazos, anexos e etapas próprios sem poluir o Kanban principal.
 
 ### Pendências
 

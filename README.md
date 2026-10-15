@@ -16,7 +16,7 @@ O Hub organiza contexto institucional, responsáveis, serviços, contratos, docu
 - métricas personalizadas, histórico e comparação entre início e situação atual;
 - objetivos vinculados a métricas com cálculo de progresso;
 - atualizações semanais, resultados destacados e timeline;
-- Kanban geral e por cliente, com tarefas internas, múltiplos responsáveis, prazos, prioridades e histórico de etapas;
+- Kanban geral e por cliente, com tarefas internas, subtarefas completas, múltiplos responsáveis, prazos, prioridades e histórico de etapas;
 - dashboard executivo, feed global e alertas de pendências;
 - auditoria automática das alterações sensíveis no banco.
 

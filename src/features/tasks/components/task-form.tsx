@@ -52,13 +52,13 @@ function TaskFields({
   clients: Option[];
   services: Option[];
   profiles: Option[];
-  fixedClientId?: string;
+  fixedClientId?: string | null;
   task?: EditableTask;
   error: (field: string) => string | undefined;
 }) {
   return <>
     {task ? <input type="hidden" name="taskId" value={task.id} /> : null}
-    {fixedClientId ? <input type="hidden" name="clientId" value={fixedClientId} /> : (
+    {fixedClientId !== undefined ? <input type="hidden" name="clientId" value={fixedClientId ?? ""} /> : (
       <Field label="Cliente" name={`${prefix}-client`} error={error("clientId")}>
         <select id={`${prefix}-client`} name="clientId" defaultValue={task?.clientId ?? ""} className={selectClassName}>
           <option value="">Tarefa interna da Compass</option>
@@ -111,14 +111,14 @@ export function CreateTaskForm({ clients, services, profiles, fixedClientId }: {
   </form>;
 }
 
-export function EditTaskForm({ task, clients, services, profiles }: { task: EditableTask; clients: Option[]; services: Option[]; profiles: Option[] }) {
+export function EditTaskForm({ task, clients, services, profiles, fixedClientId }: { task: EditableTask; clients: Option[]; services: Option[]; profiles: Option[]; fixedClientId?: string | null }) {
   const router = useRouter();
   const [state, dispatchAction, pending] = useActionState(updateTaskAction, initialTaskActionState);
   useEffect(() => { if (state.status === "success") router.refresh(); }, [router, state]);
   const error = (field: string) => state.fieldErrors?.[field]?.[0];
   function submit(event: FormEvent<HTMLFormElement>) { event.preventDefault(); const data = new FormData(event.currentTarget); startTransition(() => dispatchAction(data)); }
   return <form onSubmit={submit} className="space-y-4" noValidate>
-    <TaskFields prefix={`edit-task-${task.id}`} task={task} clients={clients} services={services} profiles={profiles} error={error} />
+    <TaskFields prefix={`edit-task-${task.id}`} task={task} clients={clients} services={services} profiles={profiles} fixedClientId={fixedClientId} error={error} />
     <Message status={state.status} message={state.message} />
     <Button type="submit" disabled={pending}>{pending ? <LoaderCircle className="animate-spin" aria-hidden="true" /> : <Save aria-hidden="true" />}Salvar alterações</Button>
   </form>;

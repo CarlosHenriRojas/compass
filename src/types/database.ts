@@ -897,6 +897,7 @@ export type Database = {
           description: string | null
           due_date: string | null
           id: string
+          parent_task_id: string | null
           priority: Database["public"]["Enums"]["task_priority"]
           service_id: string | null
           sort_order: number
@@ -913,6 +914,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           service_id?: string | null
           sort_order?: number
@@ -929,6 +931,7 @@ export type Database = {
           description?: string | null
           due_date?: string | null
           id?: string
+          parent_task_id?: string | null
           priority?: Database["public"]["Enums"]["task_priority"]
           service_id?: string | null
           sort_order?: number
@@ -949,6 +952,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "tasks_parent_task_id_fkey"
+            columns: ["parent_task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
             referencedColumns: ["id"]
           },
           {

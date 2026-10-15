@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, CalendarClock, CheckCircle2, History, UserRound } from "lucide-react";
+import { ArrowLeft, CalendarClock, CheckCircle2, History, ListChecks, UserRound } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { TaskArchiveButton } from "@/features/tasks/components/task-archive-button";
 import { TaskAttachmentList, TaskAttachmentUploadForm } from "@/features/tasks/components/task-attachments";
 import { EditTaskForm } from "@/features/tasks/components/task-form";
+import { SubtaskSection } from "@/features/tasks/components/subtask-section";
 import { taskPriorityLabels, taskStatusLabels } from "@/features/tasks/constants";
 import { getTaskFormOptions } from "@/features/tasks/data";
 import { requireCurrentProfile } from "@/lib/auth/session";
@@ -30,20 +31,33 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[id]"
   const { id } = await params;
   await requireCurrentProfile();
   const supabase = await createClient();
-  const [taskResult, assigneesResult, historyResult, attachmentsResult, options] = await Promise.all([
+  const [taskResult, assigneesResult, historyResult, attachmentsResult, subtasksResult, options] = await Promise.all([
     supabase.from("tasks").select("*, clients(id, name), services(id, name), profiles!tasks_created_by_fkey(id, full_name)").eq("id", id).is("archived_at", null).maybeSingle(),
     supabase.from("task_assignees").select("user_id, profiles!task_assignees_user_id_fkey(id, full_name)").eq("task_id", id),
     supabase.from("task_status_history").select("id, from_status, to_status, changed_at, profiles!task_status_history_changed_by_fkey(full_name)").eq("task_id", id).order("changed_at", { ascending: false }),
     supabase.from("task_attachments").select("id, name, mime_type, size_bytes, created_at, profiles!task_attachments_uploaded_by_fkey(full_name)").eq("task_id", id).order("created_at", { ascending: false }),
+    supabase.from("tasks").select("id, title, description, status, priority, due_date, task_assignees(user_id, profiles!task_assignees_user_id_fkey(id, full_name))").eq("parent_task_id", id).is("archived_at", null).order("sort_order").order("due_date", { ascending: true, nullsFirst: false }),
     getTaskFormOptions(),
   ]);
   const task = taskResult.data;
   if (!task) notFound();
   const assignees = (assigneesResult.data ?? []).map((item) => ({ id: item.user_id, name: item.profiles?.full_name ?? "Usuário" }));
+  const parent = task.parent_task_id
+    ? (await supabase.from("tasks").select("id, title").eq("id", task.parent_task_id).maybeSingle()).data
+    : null;
+  const subtasks = (subtasksResult.data ?? []).map((subtask) => ({
+    id: subtask.id,
+    title: subtask.title,
+    description: subtask.description,
+    status: subtask.status,
+    priority: subtask.priority,
+    dueDate: subtask.due_date,
+    assignees: subtask.task_assignees.flatMap((assignment) => assignment.profiles ? [{ id: assignment.profiles.id, name: assignment.profiles.full_name }] : []),
+  }));
 
   return <div className="space-y-6 lg:space-y-7">
-    <Link href="/tasks" className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}><ArrowLeft aria-hidden="true" />Voltar para tarefas</Link>
-    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div><div className="mb-3 flex flex-wrap gap-2"><Badge className={priorityStyles[task.priority]}>{taskPriorityLabels[task.priority]}</Badge><Badge variant="outline">{taskStatusLabels[task.status]}</Badge></div><h1 className="text-3xl font-semibold tracking-[-0.045em] text-foreground sm:text-[2.1rem]">{task.title}</h1><p className="mt-2 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{task.description ?? "Sem descrição."}</p></div>{task.status === "DONE" ? <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-status-healthy/25 bg-status-healthy/10 text-status-healthy"><CheckCircle2 className="size-5" aria-hidden="true" /></span> : null}</div>
+    <Link href={parent ? `/tasks/${parent.id}` : "/tasks"} className={cn(buttonVariants({ variant: "ghost", size: "sm" }), "-ml-2")}><ArrowLeft aria-hidden="true" />{parent ? "Voltar para tarefa principal" : "Voltar para tarefas"}</Link>
+    <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between"><div>{parent ? <Link href={`/tasks/${parent.id}`} className="mb-3 inline-flex items-center gap-2 text-xs font-medium text-compass-purple-light hover:underline"><ListChecks className="size-3.5" />Subtarefa de {parent.title}</Link> : null}<div className="mb-3 flex flex-wrap gap-2"><Badge className={priorityStyles[task.priority]}>{taskPriorityLabels[task.priority]}</Badge><Badge variant="outline">{taskStatusLabels[task.status]}</Badge>{parent ? <Badge variant="outline">Subtarefa</Badge> : null}</div><h1 className="text-3xl font-semibold tracking-[-0.045em] text-foreground sm:text-[2.1rem]">{task.title}</h1><p className="mt-2 max-w-3xl whitespace-pre-wrap text-sm leading-6 text-muted-foreground">{task.description ?? "Sem descrição."}</p></div>{task.status === "DONE" ? <span className="flex size-11 shrink-0 items-center justify-center rounded-xl border border-status-healthy/25 bg-status-healthy/10 text-status-healthy"><CheckCircle2 className="size-5" aria-hidden="true" /></span> : null}</div>
 
     <div className="grid gap-5 xl:grid-cols-[minmax(0,1.35fr)_minmax(320px,0.65fr)]">
       <div className="space-y-5">
@@ -54,12 +68,14 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[id]"
           <div className="rounded-xl border border-border bg-background-elevated/45 p-4"><p className="flex items-center gap-1.5 text-xs text-muted-foreground"><UserRound className="size-3.5" aria-hidden="true" />Responsáveis</p><p className="mt-2 font-semibold text-text-primary">{assignees.length ? assignees.map((item) => item.name).join(", ") : "Não definidos"}</p></div>
         </CardContent></Card>
 
+        {!task.parent_task_id ? <Card className="gap-0 py-0"><CardHeader className="border-b border-border px-5 py-5"><div className="flex items-center gap-3"><ListChecks className="size-4 text-compass-purple-light" aria-hidden="true" /><div><CardTitle>Subtarefas</CardTitle><CardDescription>Entregas menores com responsáveis, prazos e etapas independentes.</CardDescription></div></div></CardHeader><CardContent className="p-5"><SubtaskSection parentTaskId={task.id} subtasks={subtasks} profiles={options.profiles} /></CardContent></Card> : null}
+
         <Card className="gap-0 py-0"><CardHeader className="border-b border-border px-5 py-5"><div className="flex items-center gap-3"><History className="size-4 text-compass-purple-light" aria-hidden="true" /><div><CardTitle>Histórico de etapas</CardTitle><CardDescription>Movimentações registradas automaticamente.</CardDescription></div></div></CardHeader><CardContent className="divide-y divide-border px-5">{historyResult.data?.length ? historyResult.data.map((entry) => <div key={entry.id} className="flex flex-col gap-1 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-text-secondary">{entry.from_status ? taskStatusLabels[entry.from_status] : "Criação"} → <span className="font-semibold text-text-primary">{taskStatusLabels[entry.to_status]}</span></p><p className="text-xs text-muted-foreground">{entry.profiles?.full_name ?? "Sistema"} · {formatDate(entry.changed_at, true)}</p></div>) : <p className="py-6 text-sm text-muted-foreground">Nenhuma movimentação registrada ainda.</p>}</CardContent></Card>
 
         <Card className="gap-0 py-0"><CardHeader className="border-b border-border px-5 py-5"><CardTitle>Anexos</CardTitle><CardDescription>Referências de arte, briefings e arquivos relacionados à execução.</CardDescription></CardHeader><CardContent className="space-y-5 p-5"><TaskAttachmentList taskId={task.id} attachments={(attachmentsResult.data ?? []).map((attachment) => ({ id: attachment.id, name: attachment.name, mimeType: attachment.mime_type, sizeBytes: attachment.size_bytes, createdAt: attachment.created_at, uploaderName: attachment.profiles?.full_name ?? "Usuário" }))} /><details className="rounded-xl border border-border bg-background-elevated/35"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-secondary">Adicionar arquivo</summary><div className="border-t border-border p-4"><TaskAttachmentUploadForm taskId={task.id} /></div></details></CardContent></Card>
       </div>
 
-      <Card className="h-fit gap-0 py-0 xl:sticky xl:top-24"><CardHeader className="border-b border-border px-5 py-5"><CardTitle>Editar tarefa</CardTitle><CardDescription>Altere escopo, etapa, prazo e responsáveis.</CardDescription></CardHeader><CardContent className="space-y-5 p-5"><EditTaskForm task={{ id: task.id, title: task.title, description: task.description, clientId: task.client_id, serviceId: task.service_id, status: task.status, priority: task.priority, dueDate: task.due_date, assigneeIds: assignees.map((item) => item.id) }} clients={options.clients} services={options.services} profiles={options.profiles} /><div className="border-t border-border pt-5"><TaskArchiveButton taskId={task.id} /></div></CardContent></Card>
+      <Card className="h-fit gap-0 py-0 xl:sticky xl:top-24"><CardHeader className="border-b border-border px-5 py-5"><CardTitle>{parent ? "Editar subtarefa" : "Editar tarefa"}</CardTitle><CardDescription>Altere escopo, etapa, prazo e responsáveis.</CardDescription></CardHeader><CardContent className="space-y-5 p-5"><EditTaskForm task={{ id: task.id, title: task.title, description: task.description, clientId: task.client_id, serviceId: task.service_id, status: task.status, priority: task.priority, dueDate: task.due_date, assigneeIds: assignees.map((item) => item.id) }} clients={options.clients} services={options.services} profiles={options.profiles} fixedClientId={parent ? task.client_id : undefined} /><div className="border-t border-border pt-5"><TaskArchiveButton taskId={task.id} /></div></CardContent></Card>
     </div>
   </div>;
 }

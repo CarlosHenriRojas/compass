@@ -36,6 +36,16 @@ const taskSchema = z.object({
   assigneeIds: z.array(z.uuid()).max(20, "Selecione no máximo 20 responsáveis."),
 });
 
+const subtaskSchema = z.object({
+  parentTaskId: z.uuid(),
+  title: z.string().trim().min(2, "Informe o título da subtarefa.").max(180, "Use no máximo 180 caracteres."),
+  description: z.string().trim().max(5000, "Use no máximo 5.000 caracteres.").transform((value) => value || null),
+  status: z.enum(["TODO", "IN_PROGRESS", "REVIEW", "DONE"]),
+  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]),
+  dueDate: optionalDate,
+  assigneeIds: z.array(z.uuid()).max(20, "Selecione no máximo 20 responsáveis."),
+});
+
 function parseTaskForm(formData: FormData, includeTaskId = false) {
   return taskSchema.safeParse({
     taskId: includeTaskId ? formData.get("taskId") : undefined,
@@ -101,13 +111,79 @@ export async function createTaskAction(
       })),
     );
     if (assigneeError) {
-      await supabase.from("tasks").delete().eq("id", task.id);
+      await createAdminClient().from("tasks").delete().eq("id", task.id);
       return { status: "error", message: "A tarefa não foi criada porque os responsáveis não puderam ser vinculados." };
     }
   }
 
   revalidateTaskPaths(task.id, parsed.data.clientId);
   return { status: "success", message: "Tarefa criada com sucesso." };
+}
+
+export async function createSubtaskAction(
+  _previousState: TaskActionState,
+  formData: FormData,
+): Promise<TaskActionState> {
+  const profile = await requireCurrentProfile();
+  const parsed = subtaskSchema.safeParse({
+    parentTaskId: formData.get("parentTaskId"),
+    title: formData.get("title"),
+    description: formData.get("description") ?? "",
+    status: formData.get("status"),
+    priority: formData.get("priority"),
+    dueDate: formData.get("dueDate") ?? "",
+    assigneeIds: formData.getAll("assigneeIds"),
+  });
+  if (!parsed.success) {
+    return { status: "error", message: "Revise os campos destacados.", fieldErrors: parsed.error.flatten().fieldErrors };
+  }
+
+  const supabase = await createClient();
+  const [{ data: parent }, { data: canManage }] = await Promise.all([
+    supabase
+      .from("tasks")
+      .select("id, client_id, service_id")
+      .eq("id", parsed.data.parentTaskId)
+      .is("parent_task_id", null)
+      .is("archived_at", null)
+      .maybeSingle(),
+    supabase.rpc("can_manage_task", { target_task_id: parsed.data.parentTaskId }),
+  ]);
+  if (!parent) return { status: "error", message: "A tarefa principal não foi encontrada." };
+  if (!canManage) return { status: "error", message: "Você não possui permissão para criar subtarefas aqui." };
+
+  const { data: subtask, error } = await supabase
+    .from("tasks")
+    .insert({
+      parent_task_id: parent.id,
+      client_id: parent.client_id,
+      service_id: parent.service_id,
+      title: parsed.data.title,
+      description: parsed.data.description,
+      status: parsed.data.status,
+      priority: parsed.data.priority,
+      due_date: parsed.data.dueDate,
+      completed_at: parsed.data.status === "DONE" ? new Date().toISOString() : null,
+      created_by: profile.id,
+    })
+    .select("id")
+    .single();
+  if (error || !subtask) return { status: "error", message: "Não foi possível criar a subtarefa." };
+
+  const uniqueAssignees = [...new Set(parsed.data.assigneeIds)];
+  if (uniqueAssignees.length) {
+    const { error: assigneeError } = await supabase.from("task_assignees").insert(
+      uniqueAssignees.map((userId) => ({ task_id: subtask.id, user_id: userId, assigned_by: profile.id })),
+    );
+    if (assigneeError) {
+      await createAdminClient().from("tasks").delete().eq("id", subtask.id);
+      return { status: "error", message: "A subtarefa não foi criada porque os responsáveis não puderam ser vinculados." };
+    }
+  }
+
+  revalidateTaskPaths(subtask.id, parent.client_id);
+  revalidatePath(`/tasks/${parent.id}`);
+  return { status: "success", message: "Subtarefa criada com sucesso." };
 }
 
 export async function updateTaskAction(
@@ -127,17 +203,24 @@ export async function updateTaskAction(
   const supabase = await createClient();
   const { data: previous } = await supabase
     .from("tasks")
-    .select("id, client_id")
+    .select("id, client_id, parent_task_id")
     .eq("id", parsed.data.taskId)
     .maybeSingle();
   if (!previous) return { status: "error", message: "Tarefa não encontrada ou acesso não autorizado." };
+
+  let effectiveClientId = parsed.data.clientId;
+  if (previous.parent_task_id) {
+    const { data: parent } = await supabase.from("tasks").select("client_id").eq("id", previous.parent_task_id).maybeSingle();
+    if (!parent) return { status: "error", message: "A tarefa principal desta subtarefa não foi encontrada." };
+    effectiveClientId = parent.client_id;
+  }
 
   const { error } = await supabase
     .from("tasks")
     .update({
       title: parsed.data.title,
       description: parsed.data.description,
-      client_id: parsed.data.clientId,
+      client_id: effectiveClientId,
       service_id: parsed.data.serviceId,
       status: parsed.data.status,
       priority: parsed.data.priority,
@@ -159,7 +242,8 @@ export async function updateTaskAction(
   }
 
   revalidateTaskPaths(parsed.data.taskId, previous.client_id);
-  if (parsed.data.clientId !== previous.client_id) revalidateTaskPaths(parsed.data.taskId, parsed.data.clientId);
+  if (effectiveClientId !== previous.client_id) revalidateTaskPaths(parsed.data.taskId, effectiveClientId);
+  if (previous.parent_task_id) revalidatePath(`/tasks/${previous.parent_task_id}`);
   return { status: "success", message: "Tarefa atualizada com sucesso." };
 }
 
@@ -169,7 +253,7 @@ export async function updateTaskStatusAction(taskId: string, status: Enums<"task
   if (!parsed.success) return { ok: false, message: "Movimentação inválida." };
 
   const supabase = await createClient();
-  const { data: task } = await supabase.from("tasks").select("id, client_id, status").eq("id", taskId).maybeSingle();
+  const { data: task } = await supabase.from("tasks").select("id, client_id, status, parent_task_id").eq("id", taskId).maybeSingle();
   if (!task) return { ok: false, message: "Tarefa não encontrada ou acesso não autorizado." };
   if (task.status === status) return { ok: true, message: "Tarefa já está nesta etapa." };
 
@@ -180,6 +264,7 @@ export async function updateTaskStatusAction(taskId: string, status: Enums<"task
   if (error) return { ok: false, message: "Não foi possível mover a tarefa." };
 
   revalidateTaskPaths(task.id, task.client_id);
+  if (task.parent_task_id) revalidatePath(`/tasks/${task.parent_task_id}`);
   return { ok: true, message: "Tarefa movida." };
 }
 
@@ -189,11 +274,12 @@ export async function archiveTaskAction(taskId: string) {
   if (!parsed.success) return { ok: false, message: "Tarefa inválida." };
 
   const supabase = await createClient();
-  const { data: task } = await supabase.from("tasks").select("id, client_id").eq("id", parsed.data).maybeSingle();
+  const { data: task } = await supabase.from("tasks").select("id, client_id, parent_task_id").eq("id", parsed.data).maybeSingle();
   if (!task) return { ok: false, message: "Tarefa não encontrada ou acesso não autorizado." };
   const { error } = await supabase.from("tasks").update({ archived_at: new Date().toISOString() }).eq("id", parsed.data);
   if (error) return { ok: false, message: "Não foi possível arquivar a tarefa." };
   revalidateTaskPaths(task.id, task.client_id);
+  if (task.parent_task_id) revalidatePath(`/tasks/${task.parent_task_id}`);
   return { ok: true, message: "Tarefa arquivada." };
 }
 

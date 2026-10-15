@@ -21,6 +21,7 @@ export async function getTaskBoardData(clientId?: string) {
     .from("tasks")
     .select("id, title, description, status, priority, due_date, clients(id, name, archived_at), services(id, name), task_assignees(profiles!task_assignees_user_id_fkey(id, full_name))")
     .is("archived_at", null)
+    .is("parent_task_id", null)
     .order("sort_order")
     .order("due_date", { ascending: true, nullsFirst: false })
     .order("created_at", { ascending: false });
