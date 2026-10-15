@@ -1,6 +1,6 @@
 import { Brand } from "@/components/layout/brand";
 
-export default function AuthLayout({ children }: LayoutProps<"/">) {
+export default function AuthLayout({ children }: { children: React.ReactNode }) {
   return (
     <div className="grid min-h-svh bg-background lg:grid-cols-[minmax(360px,0.85fr)_minmax(560px,1.15fr)]">
       <aside className="relative hidden overflow-hidden bg-[radial-gradient(circle_at_18%_12%,var(--compass-purple-soft),transparent_32%),linear-gradient(145deg,var(--background-elevated),var(--compass-deep-brown))] p-10 text-compass-paper lg:flex lg:flex-col lg:justify-between xl:p-14">

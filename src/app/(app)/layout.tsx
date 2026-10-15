@@ -2,7 +2,13 @@ import { AppHeader } from "@/components/layout/app-header";
 import { AppSidebar } from "@/components/layout/app-sidebar";
 import { requireCurrentProfile } from "@/lib/auth/session";
 
-export default async function ApplicationLayout({ children }: LayoutProps<"/">) {
+export default async function ApplicationLayout({
+  children,
+  modal,
+}: {
+  children: React.ReactNode;
+  modal: React.ReactNode;
+}) {
   const profile = await requireCurrentProfile();
 
   return (
@@ -14,6 +20,7 @@ export default async function ApplicationLayout({ children }: LayoutProps<"/">) 
           {children}
         </main>
       </div>
+      {modal}
     </div>
   );
 }
