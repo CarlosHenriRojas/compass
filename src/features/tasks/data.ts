@@ -10,7 +10,7 @@ type TaskQueryRow = {
   status: BoardTask["status"];
   priority: BoardTask["priority"];
   due_date: string | null;
-  clients: { id: string; name: string } | null;
+  clients: { id: string; name: string; archived_at: string | null } | null;
   services: { id: string; name: string } | null;
   task_assignees: Array<{ profiles: { id: string; full_name: string } | null }>;
 };
@@ -19,7 +19,7 @@ export async function getTaskBoardData(clientId?: string) {
   const supabase = await createClient();
   let query = supabase
     .from("tasks")
-    .select("id, title, description, status, priority, due_date, clients(id, name), services(id, name), task_assignees(profiles!task_assignees_user_id_fkey(id, full_name))")
+    .select("id, title, description, status, priority, due_date, clients(id, name, archived_at), services(id, name), task_assignees(profiles!task_assignees_user_id_fkey(id, full_name))")
     .is("archived_at", null)
     .order("sort_order")
     .order("due_date", { ascending: true, nullsFirst: false })
@@ -28,17 +28,19 @@ export async function getTaskBoardData(clientId?: string) {
   const { data, error } = await query;
   if (error) throw new Error("Não foi possível carregar as tarefas.");
 
-  return ((data ?? []) as unknown as TaskQueryRow[]).map((task): BoardTask => ({
-    id: task.id,
-    title: task.title,
-    description: task.description,
-    status: task.status,
-    priority: task.priority,
-    dueDate: task.due_date,
-    client: task.clients,
-    service: task.services,
-    assignees: task.task_assignees.flatMap((assignment) => assignment.profiles ? [{ id: assignment.profiles.id, name: assignment.profiles.full_name }] : []),
-  }));
+  return ((data ?? []) as unknown as TaskQueryRow[])
+    .filter((task) => !task.clients || task.clients.archived_at === null)
+    .map((task): BoardTask => ({
+      id: task.id,
+      title: task.title,
+      description: task.description,
+      status: task.status,
+      priority: task.priority,
+      dueDate: task.due_date,
+      client: task.clients ? { id: task.clients.id, name: task.clients.name } : null,
+      service: task.services,
+      assignees: task.task_assignees.flatMap((assignment) => assignment.profiles ? [{ id: assignment.profiles.id, name: assignment.profiles.full_name }] : []),
+    }));
 }
 
 export async function getTaskFormOptions() {
