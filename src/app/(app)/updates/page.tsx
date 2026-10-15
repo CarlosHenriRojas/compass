@@ -31,8 +31,9 @@ export default async function UpdatesPage({
   let updatesQuery = supabase
     .from("weekly_updates")
     .select(
-      "*, clients!weekly_updates_client_id_fkey(id, name), profiles!weekly_updates_user_id_fkey(id, full_name), weekly_update_results(id, label, value, description, sort_order)",
+      "*, clients!weekly_updates_client_id_fkey!inner(id, name, archived_at), profiles!weekly_updates_user_id_fkey(id, full_name), weekly_update_results(id, label, value, description, sort_order)",
     )
+    .is("clients.archived_at", null)
     .order("week_end", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(100);

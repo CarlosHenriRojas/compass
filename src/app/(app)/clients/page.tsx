@@ -297,13 +297,14 @@ export default async function ClientsPage({
                         {formatDate(update?.last_update_date ?? null)}
                       </td>
                       {showArchived ? (
-                        <td className="px-5 py-4">
+                        <td className="px-5 py-4"><div className="flex flex-wrap gap-2">
                           <ClientLifecycleButton
                             clientId={client.id}
                             clientName={client.name}
                             mode="restore"
                           />
-                        </td>
+                          <ClientLifecycleButton clientId={client.id} clientName={client.name} mode="delete" />
+                        </div></td>
                       ) : null}
                     </tr>
                   );
@@ -360,11 +361,7 @@ export default async function ClientsPage({
                     <span>{formatDate(update?.last_update_date ?? null)}</span>
                   </div>
                   {showArchived ? (
-                    <ClientLifecycleButton
-                      clientId={client.id}
-                      clientName={client.name}
-                      mode="restore"
-                    />
+                    <div className="flex flex-wrap gap-2"><ClientLifecycleButton clientId={client.id} clientName={client.name} mode="restore" /><ClientLifecycleButton clientId={client.id} clientName={client.name} mode="delete" /></div>
                   ) : null}
                 </div>
               );

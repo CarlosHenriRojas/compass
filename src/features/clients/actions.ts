@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { z } from "zod";
 
 import { requireAdmin } from "@/lib/auth/session";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { createClient } from "@/lib/supabase/server";
 
 export type CreateClientState = {
@@ -559,4 +560,74 @@ export async function restoreClientAction(clientId: string) {
 
   revalidatePath("/clients");
   return { ok: true, message: "Cliente reativado." };
+}
+
+export async function deleteClientPermanentlyAction(clientId: string) {
+  await requireAdmin();
+  const id = z.uuid().safeParse(clientId);
+  if (!id.success) return { ok: false, message: "Cliente inválido." };
+
+  const admin = createAdminClient();
+  const { data: client } = await admin
+    .from("clients")
+    .select("id, logo_path")
+    .eq("id", id.data)
+    .maybeSingle();
+  if (!client) return { ok: false, message: "Cliente não encontrado." };
+
+  const [documentsResult, tasksResult] = await Promise.all([
+    admin
+      .from("documents")
+      .select("storage_bucket, storage_path")
+      .eq("client_id", id.data),
+    admin.from("tasks").select("id").eq("client_id", id.data),
+  ]);
+  if (documentsResult.error || tasksResult.error) {
+    return { ok: false, message: "Não foi possível conferir os arquivos vinculados ao cliente." };
+  }
+
+  const taskIds = (tasksResult.data ?? []).map((task) => task.id);
+  const attachmentsResult = taskIds.length
+    ? await admin
+        .from("task_attachments")
+        .select("storage_bucket, storage_path")
+        .in("task_id", taskIds)
+    : { data: [], error: null };
+  if (attachmentsResult.error) {
+    return { ok: false, message: "Não foi possível conferir os anexos das tarefas do cliente." };
+  }
+
+  const { error: deleteError } = await admin.from("clients").delete().eq("id", id.data);
+  if (deleteError) {
+    return { ok: false, message: "Não foi possível excluir o cliente e seus dados relacionados." };
+  }
+
+  const documentsByBucket = new Map<string, string[]>();
+  for (const file of [...(documentsResult.data ?? []), ...(attachmentsResult.data ?? [])]) {
+    const paths = documentsByBucket.get(file.storage_bucket) ?? [];
+    paths.push(file.storage_path);
+    documentsByBucket.set(file.storage_bucket, paths);
+  }
+  if (client.logo_path) {
+    const paths = documentsByBucket.get("client-assets") ?? [];
+    paths.push(client.logo_path);
+    documentsByBucket.set("client-assets", paths);
+  }
+
+  const storageResults = await Promise.all(
+    [...documentsByBucket.entries()].map(([bucket, paths]) =>
+      paths.length ? admin.storage.from(bucket).remove(paths) : Promise.resolve({ error: null }),
+    ),
+  );
+  const storageWarning = storageResults.some((result) => result.error);
+
+  for (const path of ["/dashboard", "/pending", "/updates", "/clients", "/tasks"]) {
+    revalidatePath(path);
+  }
+  return {
+    ok: true,
+    message: storageWarning
+      ? "Cliente excluído. Alguns arquivos órfãos precisam de limpeza no Storage."
+      : "Cliente e todos os dados relacionados foram excluídos.",
+  };
 }

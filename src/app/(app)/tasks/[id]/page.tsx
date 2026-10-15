@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import { buttonVariants } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { TaskArchiveButton } from "@/features/tasks/components/task-archive-button";
+import { TaskAttachmentList, TaskAttachmentUploadForm } from "@/features/tasks/components/task-attachments";
 import { EditTaskForm } from "@/features/tasks/components/task-form";
 import { taskPriorityLabels, taskStatusLabels } from "@/features/tasks/constants";
 import { getTaskFormOptions } from "@/features/tasks/data";
@@ -29,10 +30,11 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[id]"
   const { id } = await params;
   await requireCurrentProfile();
   const supabase = await createClient();
-  const [taskResult, assigneesResult, historyResult, options] = await Promise.all([
+  const [taskResult, assigneesResult, historyResult, attachmentsResult, options] = await Promise.all([
     supabase.from("tasks").select("*, clients(id, name), services(id, name), profiles!tasks_created_by_fkey(id, full_name)").eq("id", id).is("archived_at", null).maybeSingle(),
     supabase.from("task_assignees").select("user_id, profiles!task_assignees_user_id_fkey(id, full_name)").eq("task_id", id),
     supabase.from("task_status_history").select("id, from_status, to_status, changed_at, profiles!task_status_history_changed_by_fkey(full_name)").eq("task_id", id).order("changed_at", { ascending: false }),
+    supabase.from("task_attachments").select("id, name, mime_type, size_bytes, created_at, profiles!task_attachments_uploaded_by_fkey(full_name)").eq("task_id", id).order("created_at", { ascending: false }),
     getTaskFormOptions(),
   ]);
   const task = taskResult.data;
@@ -53,6 +55,8 @@ export default async function TaskDetailPage({ params }: PageProps<"/tasks/[id]"
         </CardContent></Card>
 
         <Card className="gap-0 py-0"><CardHeader className="border-b border-border px-5 py-5"><div className="flex items-center gap-3"><History className="size-4 text-compass-purple-light" aria-hidden="true" /><div><CardTitle>Histórico de etapas</CardTitle><CardDescription>Movimentações registradas automaticamente.</CardDescription></div></div></CardHeader><CardContent className="divide-y divide-border px-5">{historyResult.data?.length ? historyResult.data.map((entry) => <div key={entry.id} className="flex flex-col gap-1 py-4 text-sm sm:flex-row sm:items-center sm:justify-between"><p className="text-text-secondary">{entry.from_status ? taskStatusLabels[entry.from_status] : "Criação"} → <span className="font-semibold text-text-primary">{taskStatusLabels[entry.to_status]}</span></p><p className="text-xs text-muted-foreground">{entry.profiles?.full_name ?? "Sistema"} · {formatDate(entry.changed_at, true)}</p></div>) : <p className="py-6 text-sm text-muted-foreground">Nenhuma movimentação registrada ainda.</p>}</CardContent></Card>
+
+        <Card className="gap-0 py-0"><CardHeader className="border-b border-border px-5 py-5"><CardTitle>Anexos</CardTitle><CardDescription>Referências de arte, briefings e arquivos relacionados à execução.</CardDescription></CardHeader><CardContent className="space-y-5 p-5"><TaskAttachmentList taskId={task.id} attachments={(attachmentsResult.data ?? []).map((attachment) => ({ id: attachment.id, name: attachment.name, mimeType: attachment.mime_type, sizeBytes: attachment.size_bytes, createdAt: attachment.created_at, uploaderName: attachment.profiles?.full_name ?? "Usuário" }))} /><details className="rounded-xl border border-border bg-background-elevated/35"><summary className="cursor-pointer list-none px-4 py-3 text-sm font-semibold text-text-secondary">Adicionar arquivo</summary><div className="border-t border-border p-4"><TaskAttachmentUploadForm taskId={task.id} /></div></details></CardContent></Card>
       </div>
 
       <Card className="h-fit gap-0 py-0 xl:sticky xl:top-24"><CardHeader className="border-b border-border px-5 py-5"><CardTitle>Editar tarefa</CardTitle><CardDescription>Altere escopo, etapa, prazo e responsáveis.</CardDescription></CardHeader><CardContent className="space-y-5 p-5"><EditTaskForm task={{ id: task.id, title: task.title, description: task.description, clientId: task.client_id, serviceId: task.service_id, status: task.status, priority: task.priority, dueDate: task.due_date, assigneeIds: assignees.map((item) => item.id) }} clients={options.clients} services={options.services} profiles={options.profiles} /><div className="border-t border-border pt-5"><TaskArchiveButton taskId={task.id} /></div></CardContent></Card>

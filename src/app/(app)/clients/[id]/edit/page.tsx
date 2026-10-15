@@ -127,6 +127,16 @@ export default async function EditClientPage({
         </div>
         <ClientLifecycleButton clientId={id} clientName={client.name} mode="archive" />
       </div>
+
+      <div className="flex flex-col gap-4 rounded-2xl border border-status-critical/35 bg-status-critical/8 p-5 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <p className="text-sm font-semibold text-status-critical">Excluir cliente definitivamente</p>
+          <p className="mt-1 max-w-2xl text-xs leading-5 text-muted-foreground">
+            Use somente para cadastros de teste ou inseridos por engano. Todos os contratos, documentos, métricas, objetivos, atualizações e tarefas serão apagados sem possibilidade de recuperação.
+          </p>
+        </div>
+        <ClientLifecycleButton clientId={id} clientName={client.name} mode="delete" />
+      </div>
     </div>
   );
 }

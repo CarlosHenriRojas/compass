@@ -5,6 +5,7 @@ import { z } from "zod";
 
 import { requireCurrentProfile } from "@/lib/auth/session";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import type { Enums } from "@/types/database";
 
 export type TaskActionState = {
@@ -194,5 +195,32 @@ export async function archiveTaskAction(taskId: string) {
   if (error) return { ok: false, message: "Não foi possível arquivar a tarefa." };
   revalidateTaskPaths(task.id, task.client_id);
   return { ok: true, message: "Tarefa arquivada." };
+}
+
+export async function deleteTaskAttachmentAction(taskId: string, attachmentId: string) {
+  await requireCurrentProfile();
+  const parsed = z.object({ taskId: z.uuid(), attachmentId: z.uuid() }).safeParse({ taskId, attachmentId });
+  if (!parsed.success) return { ok: false, message: "Anexo inválido." };
+
+  const supabase = await createClient();
+  const { data: attachment } = await supabase
+    .from("task_attachments")
+    .select("id, task_id, storage_bucket, storage_path")
+    .eq("id", parsed.data.attachmentId)
+    .eq("task_id", parsed.data.taskId)
+    .maybeSingle();
+  if (!attachment) return { ok: false, message: "Anexo não encontrado." };
+
+  const { data: canManage } = await supabase.rpc("can_manage_task", { target_task_id: parsed.data.taskId });
+  if (!canManage) return { ok: false, message: "Você não possui permissão para remover este anexo." };
+
+  const admin = createAdminClient();
+  const { error: storageError } = await admin.storage.from(attachment.storage_bucket).remove([attachment.storage_path]);
+  if (storageError) return { ok: false, message: "Não foi possível remover o arquivo do armazenamento." };
+
+  const { error } = await supabase.from("task_attachments").delete().eq("id", attachment.id);
+  if (error) return { ok: false, message: "O arquivo foi removido, mas o registro precisa de revisão." };
+  revalidatePath(`/tasks/${parsed.data.taskId}`);
+  return { ok: true, message: "Anexo excluído." };
 }
 
